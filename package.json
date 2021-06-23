@@ -1,0 +1,39 @@
+{
+  "name": "react-xr-default-hands",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "main": "src/index.tsx",
+  "dependencies": {
+    "@react-three/drei": "^6.2.0",
+    "@react-three/fiber": "^7.0.1",
+    "@react-three/xr": "pmndrs/react-xr",
+    "@types/react": "^17.0.11",
+    "@types/react-dom": "^17.0.8",
+    "@types/react-router-dom": "^5.1.7",
+    "@types/three": "0.129.1",
+    "immer": "^9.0.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router-dom": "^5.2.0",
+    "react-scripts": "3.4.1",
+    "three": "0.129.0",
+    "typescript": "^4.3.2",
+    "zustand": "^3.5.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start:https": "set HTTPS=true&&npm start",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "postinstall": "cd node_modules/@react-three/xr && npm install && npm run build && rm -Rf node_modules"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}
