@@ -22,7 +22,6 @@ import {
 } from 'three'
 
 import { HandModel } from './HandModel'
-import { useStore } from './store'
 
 interface Props {
   controller: XRController
@@ -30,9 +29,10 @@ interface Props {
 }
 
 export function Axes({ controller, model }: Props) {
+  const [log, shouldLog] = useState(false)
+
   useFrame(() => {
     if (!model || model?.bones.length === 0) {
-      // console.log('niks', model)
       return
     }
 
@@ -44,32 +44,40 @@ export function Axes({ controller, model }: Props) {
     const indexKnuckle = model!.bones.find((bone) => (bone as any).jointName === 'index-finger-metacarpal')! as Object3D
     const pinkyKnuckle = model!.bones.find((bone) => (bone as any).jointName === 'pinky-finger-metacarpal')! as Object3D
 
-    const applyControllerOffset = (position: Vector3) => {
+    const applyControllerOffsetRotation = (position: Vector3) => {
       if (!model.isHandTracking) {
         if (controller.inputSource.handedness === 'left') {
+          // hand is pointing down, so we mirror it around the z-axis
           position.applyMatrix4(new Matrix4().makeScale(1, 1, -1))
         }
 
         position.applyEuler(new Euler(Math.PI / 2, -Math.PI / 2, 0))
-        // controller offset
         position.sub(new Vector3(0, 0.05, -0.1))
-        position.applyMatrix4(controller.controller.matrixWorld)
+        position.applyQuaternion(controller.controller.quaternion)
       }
 
       return position
     }
 
-    indexTipRef.current?.position.copy(applyControllerOffset(indexTip.position.clone()))
-    thumbTipRef.current?.position.copy(applyControllerOffset(thumbTip.position.clone()))
-    indexKnuckleRef.current?.position.copy(applyControllerOffset(indexKnuckle.position.clone()))
-    pinkyKnuckleRef.current?.position.copy(applyControllerOffset(pinkyKnuckle.position.clone()))
-    positionRef.current?.position.copy(applyControllerOffset(position.clone()))
+    const applyControllerOffsetPosition = (position: Vector3) => {
+      if (!model.isHandTracking) {
+        position.add(controller.controller.position)
+      }
 
-    const z = indexTip.position.clone().sub(thumbTip.position).normalize()
+      return position
+    }
+
+    indexTipRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(indexTip.position.clone())))
+    thumbTipRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(thumbTip.position.clone())))
+    indexKnuckleRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(indexKnuckle.position.clone())))
+    pinkyKnuckleRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(pinkyKnuckle.position.clone())))
+    positionRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())))
+
+    const z = thumbTip.position.clone().sub(indexTip.position).normalize()
 
     const zPoints: Vector3[] = [
-      applyControllerOffset(position.clone().sub(z.clone().divideScalar(2))),
-      applyControllerOffset(position.clone().add(z).sub(z.clone().divideScalar(2)))
+      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())),
+      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone().add(z)))
     ]
     const zGeom = new BufferGeometry().setFromPoints(zPoints)
     zRef.current.geometry = zGeom
@@ -77,8 +85,8 @@ export function Axes({ controller, model }: Props) {
     const y = indexKnuckle.position.clone().sub(pinkyKnuckle.position).normalize()
 
     // const yPoints: Vector3[] = [
-    //   applyControllerOffset(position.clone().sub(y.clone().divideScalar(2))),
-    //   applyControllerOffset(position.clone().add(y).sub(y.clone().divideScalar(2)))
+    //   applyControllerOffsetRotation(position.clone().sub(y.clone().divideScalar(2))),
+    //   applyControllerOffsetRotation(position.clone().add(y).sub(y.clone().divideScalar(2)))
     // ]
     // const yGeom = new BufferGeometry().setFromPoints(yPoints)
     // yRef.current.geometry = yGeom
@@ -86,8 +94,9 @@ export function Axes({ controller, model }: Props) {
     const x = new Vector3().crossVectors(z, y)
 
     const xPoints: Vector3[] = [
-      applyControllerOffset(position.clone().sub(x.clone().divideScalar(2))),
-      applyControllerOffset(position.clone().add(x).sub(x.clone().divideScalar(2)))
+      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())),
+      // notice the negate here!!
+      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone().add(x.clone().negate())))
     ]
     const xGeom = new BufferGeometry().setFromPoints(xPoints)
     xRef.current.geometry = xGeom
@@ -95,13 +104,26 @@ export function Axes({ controller, model }: Props) {
     const y2 = new Vector3().crossVectors(x, z)
 
     const y2Points: Vector3[] = [
-      applyControllerOffset(position.clone().sub(y2.clone().divideScalar(2))),
-      applyControllerOffset(position.clone().add(y2).sub(y2.clone().divideScalar(2)))
+      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())),
+      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone().add(y2)))
     ]
     const y2Geom = new BufferGeometry().setFromPoints(y2Points)
     y2Ref.current.geometry = y2Geom
-    // }
+
+    if (log && controller.inputSource.handedness === 'right') {
+      console.log(
+        JSON.stringify([
+          applyControllerOffsetRotation(x.clone().negate()).toArray(),
+          applyControllerOffsetRotation(y2.clone()).toArray(),
+          applyControllerOffsetRotation(z.clone()).toArray()
+        ])
+      )
+      shouldLog(false)
+    }
   })
+  ;(window as any).log = () => {
+    shouldLog(true)
+  }
 
   const thumbTipRef = useRef<Mesh>(null)
   const indexTipRef = useRef<Mesh>(null)
@@ -113,9 +135,6 @@ export function Axes({ controller, model }: Props) {
   const yRef = useRef<any>()
   const y2Ref = useRef<any>()
   const xRef = useRef<any>()
-
-  // const points: Vector3[] = []
-  // const geom = new BufferGeometry().setFromPoints(points)
 
   return (
     <group>
