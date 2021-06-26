@@ -29,8 +29,6 @@ interface Props {
 }
 
 export function Axes({ controller, model }: Props) {
-  const [log, shouldLog] = useState(false)
-
   useFrame(() => {
     if (!model || model?.bones.length === 0) {
       return
@@ -76,19 +74,7 @@ export function Axes({ controller, model }: Props) {
     const y2Points: Vector3[] = [position.clone(), position.clone().add(y2.clone())]
     const y2Geom = new BufferGeometry().setFromPoints(y2Points)
     y2Ref.current.geometry = y2Geom
-
-    // if (controller.inputSource.handedness === 'right') {
-    //   console.log(JSON.stringify([x.clone().toArray(), y2.clone().toArray(), z.clone().toArray()]))
-    // }
-
-    // if (log) {
-    //   console.log(controller.inputSource.handedness, JSON.stringify([x.clone().toArray(), y2.clone().toArray(), z.clone().toArray()]))
-    //   shouldLog(false)
-    // }
   })
-  ;(window as any).log = () => {
-    shouldLog(true)
-  }
 
   const thumbTipRef = useRef<Mesh>(null)
   const indexTipRef = useRef<Mesh>(null)

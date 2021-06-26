@@ -28,7 +28,6 @@ export function Grab({
   const { isHandTracking } = useXR()
 
   useXREvent('selectend', (e: XREvent) => {
-    console.log('GRAB ENDED', e)
     if (
       e.controller === grabbingController.current &&
       interacting[e.controller.inputSource.handedness] &&
@@ -62,7 +61,7 @@ export function Grab({
     }
 
     const position = model!.getHandPosition()
-    const matrix = model!.getHandMatrix()
+    const matrix = model!.getHandRotationMatrix()
 
     const controllerOBB = new OBB(position, new Vector3(0.05, 0.05, 0.05).divideScalar(2), new Matrix3().setFromMatrix4(matrix))
 

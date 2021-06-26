@@ -29,7 +29,6 @@ function HandControllersExample() {
           setModels(models)
         }}
       />
-      <DefaultXRControllers />
       <Grab
         onChange={({ isGrabbed, controller, object }) => {
           if (isGrabbed) {
@@ -39,7 +38,7 @@ function HandControllersExample() {
         models={models}
         interacting={interacting}>
         <mesh
-          position={[0.5, 1.5, -1]}
+          position={[0, 1.5, -0.2]}
           geometry={new BoxBufferGeometry(0.1, 0.1, 0.1)}
           material={new MeshBasicMaterial({ color: 'blue' })}
         />
