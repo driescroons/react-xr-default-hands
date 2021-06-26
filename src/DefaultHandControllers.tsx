@@ -6,7 +6,7 @@ import { useMemo } from 'react'
 import { Axes } from './Axes'
 import { HandModel } from './HandModel'
 
-export function DefaultHandControllers() {
+export function DefaultHandControllers({ onConnect }: { onConnect: (models: HandModel[]) => void }) {
   const { controllers, isHandTracking, isPresenting } = useXR()
   const models = useRef<HandModel[]>([])
 
@@ -21,17 +21,21 @@ export function DefaultHandControllers() {
         models.current.push(model)
       }
     })
+    onConnect(models.current)
   }, [controllers])
 
   useEffect(() => {
     // fix this firing twice when going in vr mode
     if (isPresenting && models.current.length === controllers.length) {
       controllers.forEach((c, index) => {
+        console.log('wudup')
         let model = models.current[index]
-        if (isHandTracking) {
-          model.load(c.hand, c.inputSource, isHandTracking, () => sfr(!fr))
-        } else {
-          model.load(c.controller, c.inputSource, isHandTracking, () => sfr(!fr))
+        if (model.inputSource === c.inputSource) {
+          if (isHandTracking) {
+            model.load(c.hand, c.inputSource, isHandTracking, () => sfr(!fr))
+          } else {
+            model.load(c.controller, c.inputSource, isHandTracking, () => sfr(!fr))
+          }
         }
         models.current[index] = model
       })

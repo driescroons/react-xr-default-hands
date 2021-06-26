@@ -39,50 +39,24 @@ export function Axes({ controller, model }: Props) {
     const indexTip = model!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
     const thumbTip = model!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
 
-    const position: Vector3 = indexTip.position.clone().add(thumbTip.position).multiplyScalar(0.5)
+    const position: Vector3 = indexTip.getWorldPosition(new Vector3()).add(thumbTip.getWorldPosition(new Vector3())).multiplyScalar(0.5)
 
     const indexKnuckle = model!.bones.find((bone) => (bone as any).jointName === 'index-finger-metacarpal')! as Object3D
     const pinkyKnuckle = model!.bones.find((bone) => (bone as any).jointName === 'pinky-finger-metacarpal')! as Object3D
 
-    const applyControllerOffsetRotation = (position: Vector3) => {
-      if (!model.isHandTracking) {
-        if (controller.inputSource.handedness === 'left') {
-          // hand is pointing down, so we mirror it around the z-axis
-          position.applyMatrix4(new Matrix4().makeScale(1, 1, -1))
-        }
+    indexTipRef.current?.position.copy(indexTip.getWorldPosition(new Vector3()))
+    thumbTipRef.current?.position.copy(thumbTip.getWorldPosition(new Vector3()))
+    indexKnuckleRef.current?.position.copy(indexKnuckle.getWorldPosition(new Vector3()))
+    pinkyKnuckleRef.current?.position.copy(pinkyKnuckle.getWorldPosition(new Vector3()))
+    positionRef.current?.position.copy(position.clone())
 
-        position.applyEuler(new Euler(Math.PI / 2, -Math.PI / 2, 0))
-        position.sub(new Vector3(0, 0.05, -0.1))
-        position.applyQuaternion(controller.controller.quaternion)
-      }
+    const z = thumbTip.getWorldPosition(new Vector3()).sub(indexTip.getWorldPosition(new Vector3())).normalize()
 
-      return position
-    }
-
-    const applyControllerOffsetPosition = (position: Vector3) => {
-      if (!model.isHandTracking) {
-        position.add(controller.controller.position)
-      }
-
-      return position
-    }
-
-    indexTipRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(indexTip.position.clone())))
-    thumbTipRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(thumbTip.position.clone())))
-    indexKnuckleRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(indexKnuckle.position.clone())))
-    pinkyKnuckleRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(pinkyKnuckle.position.clone())))
-    positionRef.current?.position.copy(applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())))
-
-    const z = thumbTip.position.clone().sub(indexTip.position).normalize()
-
-    const zPoints: Vector3[] = [
-      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())),
-      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone().add(z)))
-    ]
+    const zPoints: Vector3[] = [position.clone(), position.clone().add(z)]
     const zGeom = new BufferGeometry().setFromPoints(zPoints)
     zRef.current.geometry = zGeom
 
-    const y = indexKnuckle.position.clone().sub(pinkyKnuckle.position).normalize()
+    const y = indexKnuckle.getWorldPosition(new Vector3()).sub(pinkyKnuckle.getWorldPosition(new Vector3())).normalize()
 
     // const yPoints: Vector3[] = [
     //   applyControllerOffsetRotation(position.clone().sub(y.clone().divideScalar(2))),
@@ -91,35 +65,26 @@ export function Axes({ controller, model }: Props) {
     // const yGeom = new BufferGeometry().setFromPoints(yPoints)
     // yRef.current.geometry = yGeom
 
-    const x = new Vector3().crossVectors(z, y)
+    const x = new Vector3().crossVectors(z, y).negate()
 
-    const xPoints: Vector3[] = [
-      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())),
-      // notice the negate here!!
-      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone().add(x.clone().negate())))
-    ]
+    const xPoints: Vector3[] = [position.clone(), position.clone().add(x.clone())]
     const xGeom = new BufferGeometry().setFromPoints(xPoints)
     xRef.current.geometry = xGeom
 
-    const y2 = new Vector3().crossVectors(x, z)
+    const y2 = new Vector3().crossVectors(x, z).negate()
 
-    const y2Points: Vector3[] = [
-      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone())),
-      applyControllerOffsetPosition(applyControllerOffsetRotation(position.clone().add(y2)))
-    ]
+    const y2Points: Vector3[] = [position.clone(), position.clone().add(y2.clone())]
     const y2Geom = new BufferGeometry().setFromPoints(y2Points)
     y2Ref.current.geometry = y2Geom
 
-    if (log && controller.inputSource.handedness === 'right') {
-      console.log(
-        JSON.stringify([
-          applyControllerOffsetRotation(x.clone().negate()).toArray(),
-          applyControllerOffsetRotation(y2.clone()).toArray(),
-          applyControllerOffsetRotation(z.clone()).toArray()
-        ])
-      )
-      shouldLog(false)
-    }
+    // if (controller.inputSource.handedness === 'right') {
+    //   console.log(JSON.stringify([x.clone().toArray(), y2.clone().toArray(), z.clone().toArray()]))
+    // }
+
+    // if (log) {
+    //   console.log(controller.inputSource.handedness, JSON.stringify([x.clone().toArray(), y2.clone().toArray(), z.clone().toArray()]))
+    //   shouldLog(false)
+    // }
   })
   ;(window as any).log = () => {
     shouldLog(true)

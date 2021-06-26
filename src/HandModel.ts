@@ -2,6 +2,7 @@ import { XRController } from '@react-three/xr'
 import {
   Euler,
   Group,
+  Matrix3,
   Matrix4,
   Mesh,
   Object3D,
@@ -68,6 +69,8 @@ class HandModel extends Object3D {
   model: Object3D
   isHandTracking: boolean
 
+  loading: boolean
+
   constructor(controller: Group, inputSource: XRInputSource) {
     super()
 
@@ -76,54 +79,57 @@ class HandModel extends Object3D {
   }
 
   load(controller: Group, inputSource: XRInputSource, isHandTracking: boolean, onLoadedCallback: () => void) {
+    super.clear()
     this.controller.remove(this)
 
     this.controller = controller
     this.inputSource = inputSource
     this.isHandTracking = isHandTracking
 
-    super.clear()
-    const loader = new GLTFLoader()
-    loader.setPath(DEFAULT_HAND_PROFILE_PATH)
-    const fileHandedness = isHandTracking ? this.inputSource.handedness : 'right'
-    loader.load(`${fileHandedness}.glb`, (gltf) => {
-      this.model = gltf.scene.children[0]
-      super.add(this.model)
+    if (!this.loading) {
+      this.loading = true
+      const loader = new GLTFLoader()
+      loader.setPath(DEFAULT_HAND_PROFILE_PATH)
+      const fileHandedness = isHandTracking ? this.inputSource.handedness : 'right'
+      loader.load(`${fileHandedness}.glb`, (gltf) => {
+        this.model = gltf.scene.children[0]
+        super.add(this.model)
 
-      const mesh = this.model.getObjectByProperty('type', 'SkinnedMesh')! as Mesh
-      mesh.frustumCulled = false
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      ;(mesh.material as any).side = 0 // Workaround: force FrontSide = 0
+        const mesh = this.model.getObjectByProperty('type', 'SkinnedMesh')! as Mesh
+        mesh.frustumCulled = false
+        mesh.castShadow = true
+        mesh.receiveShadow = true
+        ;(mesh.material as any).side = 0 // Workaround: force FrontSide = 0
 
-      this.bones = []
-      XRHandJoints.forEach((jointName: string) => {
-        const bone = this.model.getObjectByName(jointName)
-        if (bone !== undefined) {
-          ;(bone as any).jointName = jointName
-        } else {
-          console.log(`Couldn't find ${jointName} in ${this.inputSource.handedness} hand mesh`)
+        this.bones = []
+        XRHandJoints.forEach((jointName: string) => {
+          const bone = this.model.getObjectByName(jointName)
+          if (bone !== undefined) {
+            ;(bone as any).jointName = jointName
+          } else {
+            console.log(`Couldn't find ${jointName} in ${this.inputSource.handedness} hand mesh`)
+          }
+          this.bones.push(bone!)
+        })
+
+        if (!isHandTracking) {
+          this.setPose('idle')
+          this.model.setRotationFromEuler(new Euler(Math.PI / 2, -Math.PI / 2, 0))
+
+          // only mirror the left one (this is also the right model here)
+          if (this.inputSource.handedness === 'left') {
+            this.model.applyMatrix4(new Matrix4().makeScale(-1, 1, 1))
+          }
+
+          // hand position offset
+          this.model.position.sub(new Vector3(0, 0.05, -0.1))
         }
-        this.bones.push(bone!)
+
+        this.controller.add(this)
+        onLoadedCallback()
+        this.loading = false
       })
-
-      if (!isHandTracking) {
-        this.setPose('idle')
-
-        this.model.setRotationFromEuler(new Euler(Math.PI / 2, -Math.PI / 2, 0))
-
-        // only mirror the left one (this is also the right model here)
-        if (this.inputSource.handedness === 'left') {
-          this.model.applyMatrix4(new Matrix4().makeScale(-1, 1, 1))
-        }
-
-        // hand position offset
-        this.model.position.sub(new Vector3(0, 0.05, -0.1))
-      }
-
-      this.controller.add(this)
-      onLoadedCallback()
-    })
+    }
   }
 
   updateMatrixWorld(force: boolean) {
@@ -155,6 +161,60 @@ class HandModel extends Object3D {
         }
       }
     }
+  }
+
+  getHandTransform() {
+    const quaternion = new Quaternion()
+    const rotation = this.getHandMatrix().decompose(new Vector3(), quaternion, new Vector3())
+    const position = this.getHandPosition()
+
+    return new Matrix4().compose(position, quaternion, new Vector3(1, 1, 1))
+  }
+
+  getHandMatrix() {
+    const indexTip = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
+    const thumbTip = this!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
+    const indexKnuckle = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-metacarpal')! as Object3D
+    const pinkyKnuckle = this!.bones.find((bone) => (bone as any).jointName === 'pinky-finger-metacarpal')! as Object3D
+
+    const z = thumbTip.getWorldPosition(new Vector3()).sub(indexTip.getWorldPosition(new Vector3())).normalize()
+
+    const y = indexKnuckle.getWorldPosition(new Vector3()).sub(pinkyKnuckle.getWorldPosition(new Vector3())).normalize()
+
+    const x = new Vector3().crossVectors(z, y).negate()
+
+    const y2 = new Vector3().crossVectors(x, z).negate()
+
+    return new Matrix4().makeBasis(x, y2, z)
+
+    // with set coords, the matrix does not do weird stuff
+
+    // let coords = [
+    //   [0.7583325866001847, -0.21434992435107506, 0.31402240533921655],
+    //   [0.3573377628433147, 0.6411351180495899, -0.42529960812789247],
+    //   [-0.15309079643139686, 0.6041077712559645, 0.7820594662531438]
+    // ]
+
+    // // let coords = [
+    // //   [0.7583325866001847, -0.21434992435107506, 0.31402240533921655],
+    // //   [0.3573377628433147, 0.6411351180495899, -0.42529960812789247],
+    // //   [-0.15309079643139686, 0.6041077712559645, 0.7820594662531438]
+    // // ]
+
+    // let x = new Vector3().fromArray(coords[0])
+    // let y = new Vector3().fromArray(coords[1])
+    // let z = new Vector3().fromArray(coords[2])
+
+    // return new Matrix4().makeBasis(x, y, z)
+  }
+
+  getHandPosition() {
+    const indexTip = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
+    const thumbTip = this!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
+
+    const position: Vector3 = indexTip.getWorldPosition(new Vector3()).add(thumbTip.getWorldPosition(new Vector3())).multiplyScalar(0.5)
+
+    return position
   }
 }
 
