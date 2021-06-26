@@ -47,7 +47,7 @@ export function Grab({
       return
     }
 
-    const object = groupRef.current!
+    const object = groupRef.current!.children[0]
 
     const obb = new OBB(
       new Vector3().setFromMatrixPosition(object.matrixWorld),
@@ -71,7 +71,7 @@ export function Grab({
     if (colliding) {
       grabbingController.current = e.controller
       const transform = model.getHandTransform()
-      previousTransform.current = transform.invert()
+      previousTransform.current = transform.clone().invert()
       onChange({ isGrabbed: true, controller: e.controller, object: groupRef.current! })
     }
   })
@@ -93,23 +93,21 @@ export function Grab({
 
     // idk why this is not included in the previousTransform?
     // this should not be the hand position, but the parent group
-    group.position.copy(model.getHandPosition().negate())
     group.applyMatrix4(previousTransform.current)
     group.applyMatrix4(transform)
-    group.position.copy(new Vector3(0, 0, 0))
 
     group.updateWorldMatrix(false, true)
 
-    previousTransform.current = transform.invert()
+    previousTransform.current = transform.clone().invert()
   })
 
   return (
-    <Interactive
+    <group
       ref={groupRef}
       // doesn't work for testing as we have to hover the block
       // onSelectStart={onSelectStart}>
     >
       {children}
-    </Interactive>
+    </group>
   )
 }

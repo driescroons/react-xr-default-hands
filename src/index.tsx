@@ -30,18 +30,20 @@ function HandControllersExample() {
         }}
       />
       <DefaultXRControllers />
-      <group position={[0.5, 1.5, -1]}>
-        <Grab
-          onChange={({ isGrabbed, controller, object }) => {
-            if (isGrabbed) {
-              setInteracting({ ...interacting, [controller.inputSource.handedness]: object })
-            }
-          }}
-          models={models}
-          interacting={interacting}>
-          <mesh geometry={new BoxBufferGeometry(0.1, 0.1, 0.1)} material={new MeshBasicMaterial({ color: 'blue' })} />
-        </Grab>
-      </group>
+      <Grab
+        onChange={({ isGrabbed, controller, object }) => {
+          if (isGrabbed) {
+            setInteracting({ ...interacting, [controller.inputSource.handedness]: object })
+          }
+        }}
+        models={models}
+        interacting={interacting}>
+        <mesh
+          position={[0.5, 1.5, -1]}
+          geometry={new BoxBufferGeometry(0.1, 0.1, 0.1)}
+          material={new MeshBasicMaterial({ color: 'blue' })}
+        />
+      </Grab>
     </VRCanvas>
   )
 }
