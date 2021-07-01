@@ -40,7 +40,7 @@ function HandControllersExample() {
         //   right: 'https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/right-hand-white-webxr-tracking-ready/model.gltf'
         // }}
       />
-      {/* <Grab
+      <Grab
         onChange={({ isGrabbed, controller, object }) => {
           if (isGrabbed) {
             setInteracting({ ...interacting, [controller.inputSource.handedness]: object })
@@ -49,9 +49,9 @@ function HandControllersExample() {
         models={models}
         interacting={interacting}>
         <Suspense fallback={null}>
-          <Crate position={[0, 1.5, -0.1]} scale={[0.1, 0.1, 0.1]} />
+          <Crate position={[0, 1.5, 0]} scale={[0.1, 0.1, 0.1]} />
         </Suspense>
-      </Grab> */}
+      </Grab>
       <Grab
         onChange={({ isGrabbed, controller, object }) => {
           if (isGrabbed) {
