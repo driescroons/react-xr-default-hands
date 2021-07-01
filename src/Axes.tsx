@@ -74,10 +74,22 @@ export function Axes({ controller, model }: Props) {
     const y2Points: Vector3[] = [position.clone(), position.clone().add(y2.clone())]
     const y2Geom = new BufferGeometry().setFromPoints(y2Points)
     y2Ref.current.geometry = y2Geom
+
+    const distance = indexTip.getWorldPosition(new Vector3()).sub(thumbTip.getWorldPosition(new Vector3()))
+
+    thumbTipCollidingRef.current?.position.copy(
+      thumbTip.getWorldPosition(new Vector3()).add(new Vector3().copy(distance.clone().divideScalar(20)))
+    )
+
+    indexTipCollidingRef.current?.position.copy(
+      indexTip.getWorldPosition(new Vector3()).sub(new Vector3().copy(distance.clone().divideScalar(20)))
+    )
   })
 
   const thumbTipRef = useRef<Mesh>(null)
+  const thumbTipCollidingRef = useRef<Mesh>(null)
   const indexTipRef = useRef<Mesh>(null)
+  const indexTipCollidingRef = useRef<Mesh>(null)
   const indexKnuckleRef = useRef<Mesh>(null)
   const pinkyKnuckleRef = useRef<Mesh>(null)
   const positionRef = useRef<Mesh>(null)
@@ -90,7 +102,9 @@ export function Axes({ controller, model }: Props) {
   return (
     <group>
       <mesh ref={thumbTipRef} geometry={new SphereGeometry(0.005)} material={new MeshBasicMaterial({ color: 'blue' })} />
+      <mesh ref={thumbTipCollidingRef} geometry={new SphereGeometry(0.01)} material={new MeshBasicMaterial({ color: 'orange' })} />
       <mesh ref={indexTipRef} geometry={new SphereGeometry(0.005)} material={new MeshBasicMaterial({ color: 'blue' })} />
+      <mesh ref={indexTipCollidingRef} geometry={new SphereGeometry(0.01)} material={new MeshBasicMaterial({ color: 'orange' })} />
       <mesh ref={indexKnuckleRef} geometry={new SphereGeometry(0.01)} material={new MeshBasicMaterial({ color: 'green' })} />
       <mesh ref={pinkyKnuckleRef} geometry={new SphereGeometry(0.01)} material={new MeshBasicMaterial({ color: 'green' })} />
       <mesh ref={positionRef} geometry={new SphereGeometry(0.005)} material={new MeshBasicMaterial({ color: 'white' })} />
