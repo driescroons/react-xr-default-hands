@@ -88,30 +88,31 @@ export function Grab({
 
     const group = groupRef.current
 
-    const transform = model.getHandTransform()
+    let transform = model.getHandTransform()
 
     // apply previous transform
     group.applyMatrix4(previousTransform.current.clone().invert())
 
-    // get quaternion from previous matrix
-    const previousQuaternion = new Quaternion()
-    previousTransform.current.decompose(new Vector3(), previousQuaternion, new Vector3(1, 1, 1))
+    if (isHandTracking) {
+      // get quaternion from previous matrix
+      const previousQuaternion = new Quaternion()
+      previousTransform.current.decompose(new Vector3(), previousQuaternion, new Vector3(1, 1, 1))
 
-    // get quaternion from current matrix
-    const currentQuaternion = new Quaternion()
-    transform.decompose(new Vector3(), currentQuaternion, new Vector3(1, 1, 1))
+      // get quaternion from current matrix
+      const currentQuaternion = new Quaternion()
+      transform.decompose(new Vector3(), currentQuaternion, new Vector3(1, 1, 1))
 
-    // slerp to current quaternion
-    previousQuaternion.slerp(currentQuaternion, 0.1)
+      // slerp to current quaternion
+      previousQuaternion.slerp(currentQuaternion, 0.1)
 
-    const position = model.getHandPosition()
-    const matrix = new Matrix4().compose(position, previousQuaternion, new Vector3(1, 1, 1))
+      const position = model.getHandPosition()
+      transform = new Matrix4().compose(position, previousQuaternion, new Vector3(1, 1, 1))
+    }
 
-    group.applyMatrix4(matrix)
+    group.applyMatrix4(transform)
 
     group.updateWorldMatrix(false, true)
-
-    previousTransform.current = matrix.clone()
+    previousTransform.current = transform.clone()
   })
 
   return (
