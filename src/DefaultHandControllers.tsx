@@ -13,7 +13,13 @@ enum HandAction {
   'grab'
 }
 
-export function DefaultHandControllers({ onConnect }: { onConnect: (models: HandModel[]) => void }) {
+export function DefaultHandControllers({
+  onConnect,
+  modelPaths
+}: {
+  onConnect: (models: HandModel[]) => void
+  modelPaths?: { [key in XRHandedness]?: string }
+}) {
   const { controllers, isHandTracking, isPresenting } = useXR()
   const models = useRef<HandModel[]>([])
 
@@ -28,7 +34,7 @@ export function DefaultHandControllers({ onConnect }: { onConnect: (models: Hand
     controllers.map((c) => {
       let model = models.current.find((model) => model.inputSource.handedness === c.inputSource.handedness)
       if (!model) {
-        const model = new HandModel(c.controller, c.inputSource)
+        const model = new HandModel(c.controller, c.inputSource, modelPaths)
         models.current.push(model)
       }
     })
@@ -108,11 +114,8 @@ export function DefaultHandControllers({ onConnect }: { onConnect: (models: Hand
     }
   })
 
+  //
   return (
-    <>
-      {controllers.map((c, index) => (
-        <Axes controller={c} model={models.current[index]} />
-      ))}
-    </>
+    <>{process.env.NODE_ENV === 'development' && controllers.map((c, index) => <Axes controller={c} model={models.current[index]} />)}</>
   )
 }

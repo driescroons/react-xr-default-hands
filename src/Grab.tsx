@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { Interactive, useXR, useXREvent, XRController, XREvent } from '@react-three/xr'
 import { group } from 'console'
 import React, { ReactNode, useCallback, useRef } from 'react'
-import { Matrix3, Matrix4, Object3D, Quaternion, Vector3, XRHandedness } from 'three'
+import { Box3, Matrix3, Matrix4, Mesh, Object3D, Quaternion, Vector3, XRHandedness } from 'three'
 import { OBB } from 'three/examples/jsm/math/OBB'
 
 import { HandModel } from './HandModel'
@@ -47,11 +47,22 @@ export function Grab({
     }
 
     const object = groupRef.current!.children[0]
+    // console.log((object as Mesh).geometry.boundingBox)
+    let mesh: Mesh | undefined = undefined
+    groupRef.current!.traverse((object) => {
+      if (!mesh && object instanceof Mesh && object.geometry) {
+        mesh = object
+      }
+    })
+
+    if (!mesh) {
+      return
+    }
 
     const obb = new OBB(
-      new Vector3().setFromMatrixPosition(object.matrixWorld),
-      new Vector3(0.1, 0.1, 0.1).divideScalar(2),
-      new Matrix3().setFromMatrix4(object.matrixWorld)
+      new Vector3().setFromMatrixPosition((mesh as Mesh)!.matrixWorld),
+      ((mesh as Mesh).geometry!.boundingBox as Box3).getSize(new Vector3()).multiply(object.scale).divideScalar(2),
+      new Matrix3().setFromMatrix4((mesh as Mesh)!.matrixWorld.clone().makeScale(1, 1, 1))
     )
 
     const model = models.find((model) => model.inputSource.handedness === e.controller.inputSource.handedness)

@@ -1,4 +1,4 @@
-import { Euler, Group, Matrix4, Mesh, Object3D, Quaternion, Vector3, XRInputSource } from 'three'
+import { Euler, Group, Matrix4, Mesh, Object3D, Quaternion, Vector3, XRHandedness, XRInputSource } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 
 import { defaultPose } from './poses/default'
@@ -53,13 +53,16 @@ class HandModel extends Object3D {
   model: Object3D
   isHandTracking: boolean
 
+  modelPaths?: { [key in XRHandedness]?: string }
+
   loading: boolean
 
-  constructor(controller: Group, inputSource: XRInputSource) {
+  constructor(controller: Group, inputSource: XRInputSource, modelPaths?: { [key in XRHandedness]?: string }) {
     super()
 
     this.controller = controller
     this.inputSource = inputSource
+    this.modelPaths = modelPaths
   }
 
   load(controller: Group, inputSource: XRInputSource, isHandTracking: boolean, onLoadedCallback: () => void) {
@@ -71,9 +74,9 @@ class HandModel extends Object3D {
 
     this.loading = true
     const loader = new GLTFLoader()
-    loader.setPath(DEFAULT_HAND_PROFILE_PATH)
+    // loader.setPath(this.modelPath ?? DEFAULT_HAND_PROFILE_PATH)
     const fileHandedness = isHandTracking ? this.inputSource.handedness : 'right'
-    loader.load(`${fileHandedness}.glb`, (gltf) => {
+    loader.load((this.modelPaths && this.modelPaths[fileHandedness]) ?? `${DEFAULT_HAND_PROFILE_PATH}${fileHandedness}.glb`, (gltf) => {
       this.model = gltf.scene.children[0]
 
       // clearing everything first
@@ -145,6 +148,7 @@ class HandModel extends Object3D {
     }
   }
 
+  // should not be used anymore
   getThumbIndexDistance() {
     const indexTip = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
     const thumbTip = this!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
@@ -154,15 +158,15 @@ class HandModel extends Object3D {
 
   getHandTransform() {
     const quaternion = new Quaternion()
-    const rotation = this.getHandRotationMatrix().decompose(new Vector3(), quaternion, new Vector3())
+    this.getHandRotationMatrix().decompose(new Vector3(), quaternion, new Vector3())
     const position = this.getHandPosition()
 
     return new Matrix4().compose(position, quaternion, new Vector3(1, 1, 1))
   }
 
   getHandRotationMatrix() {
-    const indexTip = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
-    const thumbTip = this!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
+    const indexTip = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-phalanx-proximal')! as Object3D
+    const thumbTip = this!.bones.find((bone) => (bone as any).jointName === 'thumb-phalanx-proximal')! as Object3D
     const indexKnuckle = this!.bones.find((bone) => (bone as any).jointName === 'index-finger-metacarpal')! as Object3D
     const pinkyKnuckle = this!.bones.find((bone) => (bone as any).jointName === 'pinky-finger-metacarpal')! as Object3D
 
