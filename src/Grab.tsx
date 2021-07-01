@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { Interactive, useXR, useXREvent, XRController, XREvent } from '@react-three/xr'
 import { group } from 'console'
 import React, { ReactNode, useCallback, useRef } from 'react'
-import { Matrix3, Matrix4, Object3D, Vector3, XRHandedness } from 'three'
+import { Matrix3, Matrix4, Object3D, Quaternion, Vector3, XRHandedness } from 'three'
 import { OBB } from 'three/examples/jsm/math/OBB'
 
 import { HandModel } from './HandModel'
@@ -70,7 +70,7 @@ export function Grab({
     if (colliding) {
       grabbingController.current = e.controller
       const transform = model.getHandTransform()
-      previousTransform.current = transform.clone().invert()
+      previousTransform.current = transform.clone()
       onChange({ isGrabbed: true, controller: e.controller, object: groupRef.current! })
     }
   })
@@ -90,14 +90,28 @@ export function Grab({
 
     const transform = model.getHandTransform()
 
-    // idk why this is not included in the previousTransform?
-    // this should not be the hand position, but the parent group
-    group.applyMatrix4(previousTransform.current)
-    group.applyMatrix4(transform)
+    // apply previous transform
+    group.applyMatrix4(previousTransform.current.clone().invert())
+
+    // get quaternion from previous matrix
+    const previousQuaternion = new Quaternion()
+    previousTransform.current.decompose(new Vector3(), previousQuaternion, new Vector3(1, 1, 1))
+
+    // get quaternion from current matrix
+    const currentQuaternion = new Quaternion()
+    transform.decompose(new Vector3(), currentQuaternion, new Vector3(1, 1, 1))
+
+    // slerp to current quaternion
+    previousQuaternion.slerp(currentQuaternion, 0.1)
+
+    const position = model.getHandPosition()
+    const matrix = new Matrix4().compose(position, previousQuaternion, new Vector3(1, 1, 1))
+
+    group.applyMatrix4(matrix)
 
     group.updateWorldMatrix(false, true)
 
-    previousTransform.current = transform.clone().invert()
+    previousTransform.current = matrix.clone()
   })
 
   return (

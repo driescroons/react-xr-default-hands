@@ -1,17 +1,23 @@
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { useXR, useXREvent, XREvent } from '@react-three/xr'
-import { monitorEventLoopDelay } from 'perf_hooks'
 import React, { useEffect, useRef, useState } from 'react'
 import { useCallback } from 'react'
 import { useMemo } from 'react'
-import { XRHandedness, XRInputSourceChangeEvent } from 'three'
+import { XRHandedness } from 'three'
 
 import { Axes } from './Axes'
 import { HandModel } from './HandModel'
 
+enum HandAction {
+  'release',
+  'grab'
+}
+
 export function DefaultHandControllers({ onConnect }: { onConnect: (models: HandModel[]) => void }) {
   const { controllers, isHandTracking, isPresenting } = useXR()
   const models = useRef<HandModel[]>([])
+
+  const handActions = useRef<{ [key in XRHandedness]?: { date: number; distance: number; action: HandAction }[] }>({ left: [], right: [] })
 
   const [pinched, setPinched] = useState<{ [key in XRHandedness]?: boolean }>({ left: false, right: false })
 
@@ -50,12 +56,32 @@ export function DefaultHandControllers({ onConnect }: { onConnect: (models: Hand
         const model = models.current[index]
         if (!model.loading) {
           const distance = model.getThumbIndexDistance()
-          if (!pinched[c.inputSource.handedness] && distance < 0.05) {
+
+          // get todo actions
+          const actions = handActions.current[c.inputSource.handedness]!.filter(({ date }) => Date.now() > date)
+          // remove from initial list
+          actions.forEach((x) =>
+            handActions.current[c.inputSource.handedness]!.splice(handActions.current[c.inputSource.handedness]!.indexOf(x), 1)
+          )
+
+          // mutates the actions, but we don't need those anymore
+          // otherwise .slice(-1)
+          const action = actions.pop()
+
+          const isPinched = pinched[c.inputSource.handedness]
+          handActions.current[c.inputSource.handedness]!.push({
+            date: Date.now() + 200,
+            action: isPinched ? HandAction.release : HandAction.grab,
+            distance: distance + (isPinched ? 0.05 : -0.05)
+          })
+
+          // might be that we still push a "grab", even though we should wait for a release
+          if (!isPinched && ((action?.action === HandAction.grab && action.distance > distance) || distance < 0.01)) {
             c.controller.dispatchEvent({ type: 'selectstart', fake: true })
             setPinched({ ...pinched, [c.inputSource.handedness]: true })
           }
 
-          if (pinched[c.inputSource.handedness] && distance > 0.1) {
+          if (isPinched && ((action?.action === HandAction.release && action.distance < distance) || distance > 0.1)) {
             c.controller.dispatchEvent({ type: 'selectend', fake: true })
             setPinched({ ...pinched, [c.inputSource.handedness]: false })
           }
