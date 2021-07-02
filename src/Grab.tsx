@@ -84,9 +84,21 @@ export const Grab = forwardRef(
       const position = model!.getHandPosition()
       const matrix = model!.getHandRotationMatrix()
 
-      const controllerOBB = new OBB(position, new Vector3(0.05, 0.05, 0.05).divideScalar(2), new Matrix3().setFromMatrix4(matrix))
+      const indexTip = model!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
+      const thumbTip = model!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
 
-      const colliding = obb.intersectsOBB(controllerOBB, Number.EPSILON)
+      const thumbOBB = new OBB(
+        indexTip.getWorldPosition(new Vector3()),
+        new Vector3(0.05, 0.05, 0.05).divideScalar(2),
+        new Matrix3().setFromMatrix4(matrix)
+      )
+      const indexOBB = new OBB(
+        thumbTip.getWorldPosition(new Vector3()),
+        new Vector3(0.05, 0.05, 0.05).divideScalar(2),
+        new Matrix3().setFromMatrix4(matrix)
+      )
+
+      const colliding = obb.intersectsOBB(thumbOBB, Number.EPSILON) && obb.intersectsOBB(indexOBB, Number.EPSILON)
 
       if (colliding) {
         grabbingController.current = e.controller

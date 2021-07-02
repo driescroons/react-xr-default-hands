@@ -19,10 +19,10 @@ export default function Crate(props: any) {
   useEffect(() => {
     materialsRef.current = Object.values(materials).reduce((object: object, material: MeshStandardMaterial) => {
       object[material.name] = material.clone()
-      material.metalness = 0.3
+      material.metalness = 0.5
       return object
     }, {})
-  }, materials)
+  }, [materials])
 
   useEffect(() => {
     if (isGrabbed) {
@@ -31,7 +31,7 @@ export default function Crate(props: any) {
       })
     } else {
       Object.values(materialsRef.current).forEach((material: MeshStandardMaterial) => {
-        material.metalness = 0.3
+        material.metalness = 0.5
       })
     }
   }, [isGrabbed])

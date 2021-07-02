@@ -79,7 +79,7 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
     if (isHandTracking) {
       controllers.map((c, index) => {
         const model = models?.current[c.inputSource.handedness]
-        if (!model?.loading) {
+        if (model && !model?.loading) {
           const distance = model!.getThumbIndexDistance()
 
           // get todo actions
