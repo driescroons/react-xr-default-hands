@@ -133,7 +133,6 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
     }
   })
 
-  //
   return (
     <>
       {process.env.NODE_ENV === 'development' &&
