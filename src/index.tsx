@@ -7,7 +7,6 @@ import { Suspense } from 'react'
 import ReactDOM from 'react-dom'
 import { VRButton } from 'three/examples/jsm/webxr/VRButton'
 
-import Crate from './Crate'
 import { DefaultHandControllers } from './DefaultHandControllers'
 import Level from './Level'
 
@@ -15,6 +14,7 @@ import Level from './Level'
 function HandControllersExample() {
   return (
     <VRCanvas
+      mode="concurrent"
       onCreated={(args) => {
         args.gl.setClearColor('grey')
         void document.body.appendChild(VRButton.createButton(args.gl))
@@ -33,4 +33,4 @@ function HandControllersExample() {
   )
 }
 
-ReactDOM.render(<HandControllersExample />, document.getElementById('root'))
+;(ReactDOM as any).createRoot(document.getElementById('root')).render(<HandControllersExample />)
