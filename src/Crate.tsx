@@ -9,9 +9,7 @@ export default function Crate(props: any) {
   const group = useRef<Object3D | undefined>()
   const { nodes, materials } = useGLTF('https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/crate/model.gltf') as any
 
-  console.log(materials)
   const materialsRef = useRef(materials)
-  console.log(materialsRef.current)
   const [isGrabbed, setGrabbed] = useState(false)
 
   const set = useStore((store) => store.set)
