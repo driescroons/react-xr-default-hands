@@ -2,66 +2,85 @@ import { useFrame } from '@react-three/fiber'
 import { useXR, useXREvent, XREvent } from '@react-three/xr'
 import React, { useEffect, useRef, useState } from 'react'
 import { useCallback } from 'react'
+import { MutableRefObject } from 'react'
 import { useMemo } from 'react'
 import { XRHandedness } from 'three'
 
 import { Axes } from './Axes'
 import { HandModel } from './HandModel'
+import { useStore } from './store'
 
 enum HandAction {
   'release',
   'grab'
 }
 
-export function DefaultHandControllers({
-  onConnect,
-  modelPaths
-}: {
-  onConnect: (models: HandModel[]) => void
-  modelPaths?: { [key in XRHandedness]?: string }
-}) {
+export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in XRHandedness]?: string } }) {
   const { controllers, isHandTracking, isPresenting } = useXR()
-  const models = useRef<HandModel[]>([])
+
+  const models = useStore((store) => store.hands.models)
+  const set = useStore((store) => store.set)
 
   const handActions = useRef<{ [key in XRHandedness]?: { date: number; distance: number; action: HandAction }[] }>({ left: [], right: [] })
 
   const [pinched, setPinched] = useState<{ [key in XRHandedness]?: boolean }>({ left: false, right: false })
 
-  // fix this shit
-  const [fr, sfr] = useState(false)
+  const modelsRef = useRef<{ [key in XRHandedness]?: HandModel }>({
+    left: undefined,
+    right: undefined
+  })
+
+  const interactingRef = useRef<{ [key in XRHandedness]?: HandModel }>({
+    left: undefined,
+    right: undefined
+  })
 
   useEffect(() => {
-    controllers.map((c) => {
-      let model = models.current.find((model) => model.inputSource.handedness === c.inputSource.handedness)
-      if (!model) {
-        const model = new HandModel(c.controller, c.inputSource, modelPaths)
-        models.current.push(model)
-      }
+    set((store) => {
+      store.hands.models = modelsRef
+      store.hands.interacting = interactingRef
     })
-    onConnect(models.current)
+  }, [])
+
+  useEffect(() => {
+    if (models?.current) {
+      controllers.map((c) => {
+        let model = models?.current[c.inputSource.handedness]
+        if (!model) {
+          const model = new HandModel(c.controller, c.inputSource, modelPaths)
+          models!.current[c.inputSource.handedness] = model
+        }
+      })
+    }
   }, [controllers])
 
   useEffect(() => {
     // fix this firing twice when going in vr mode
-    if (isPresenting && models.current.length === controllers.length) {
+    if (isPresenting && Object.values(models!.current).filter((model) => !!model).length === controllers.length) {
       controllers.forEach((c, index) => {
-        let model = models.current[index]
-        if (isHandTracking) {
-          model.load(c.hand, c.inputSource, true, () => sfr(!fr))
-        } else {
-          model.load(c.controller, c.inputSource, false, () => sfr(!fr))
+        let model = models!.current[c.inputSource.handedness]
+        if (model) {
+          if (isHandTracking) {
+            if (!(model.inputSource.handedness === c.inputSource.handedness && model.loaded)) {
+              model.load(c.hand, c.inputSource, true)
+            }
+          } else {
+            if (!(model.inputSource.handedness === c.inputSource.handedness && model.loaded)) {
+              model.load(c.controller, c.inputSource, false)
+            }
+          }
+          models!.current[c.inputSource.handedness] = model
         }
-        models.current[index] = model
       })
     }
-  }, [controllers, isHandTracking])
+  }, [controllers, isHandTracking, models])
 
   useFrame(() => {
     if (isHandTracking) {
       controllers.map((c, index) => {
-        const model = models.current[index]
-        if (!model.loading) {
-          const distance = model.getThumbIndexDistance()
+        const model = models?.current[c.inputSource.handedness]
+        if (!model?.loading) {
+          const distance = model!.getThumbIndexDistance()
 
           // get todo actions
           const actions = handActions.current[c.inputSource.handedness]!.filter(({ date }) => Date.now() > date)
@@ -98,7 +117,7 @@ export function DefaultHandControllers({
 
   useXREvent('selectstart', (e: XREvent) => {
     if (!isHandTracking) {
-      const model = models.current.find((model) => model.inputSource.handedness === e.controller.inputSource.handedness)
+      const model = models?.current[e.controller.inputSource.handedness]
       if (model) {
         model.setPose('pinch')
       }
@@ -107,7 +126,7 @@ export function DefaultHandControllers({
 
   useXREvent('selectend', (e: XREvent) => {
     if (!isHandTracking) {
-      const model = models.current.find((model) => model.inputSource.handedness === e.controller.inputSource.handedness)
+      const model = models?.current[e.controller.inputSource.handedness]
       if (model) {
         model.setPose('idle')
       }
@@ -116,6 +135,11 @@ export function DefaultHandControllers({
 
   //
   return (
-    <>{process.env.NODE_ENV === 'development' && controllers.map((c, index) => <Axes controller={c} model={models.current[index]} />)}</>
+    <>
+      {process.env.NODE_ENV === 'development' &&
+        controllers.map((c, index) =>
+          models?.current[c.inputSource.handedness] ? <Axes controller={c} model={models!.current[c.inputSource.handedness]!} /> : null
+        )}
+    </>
   )
 }

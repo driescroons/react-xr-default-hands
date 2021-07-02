@@ -56,6 +56,7 @@ class HandModel extends Object3D {
   modelPaths?: { [key in XRHandedness]?: string }
 
   loading: boolean
+  loaded: boolean
 
   constructor(controller: Group, inputSource: XRInputSource, modelPaths?: { [key in XRHandedness]?: string }) {
     super()
@@ -65,7 +66,7 @@ class HandModel extends Object3D {
     this.modelPaths = modelPaths
   }
 
-  load(controller: Group, inputSource: XRInputSource, isHandTracking: boolean, onLoadedCallback: () => void) {
+  load(controller: Group, inputSource: XRInputSource, isHandTracking: boolean) {
     this.controller.remove(this)
 
     this.controller = controller
@@ -73,6 +74,7 @@ class HandModel extends Object3D {
     this.isHandTracking = isHandTracking
 
     this.loading = true
+    this.loaded = false
     const loader = new GLTFLoader()
     // loader.setPath(this.modelPath ?? DEFAULT_HAND_PROFILE_PATH)
     const fileHandedness = isHandTracking ? this.inputSource.handedness : 'right'
@@ -114,8 +116,8 @@ class HandModel extends Object3D {
       }
 
       this.loading = false
+      this.loaded = true
       this.controller.add(this)
-      onLoadedCallback()
     })
   }
 
