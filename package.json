@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "keywords": [],
-  "main": "src/index.html",
+  "main": "public/index.html",
   "dependencies": {
     "@react-three/drei": "^6.2.0",
     "@react-three/fiber": "^7.0.1",
