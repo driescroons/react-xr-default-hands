@@ -5,6 +5,7 @@
   "keywords": [],
   "main": "lib/index.html",
   "dependencies": {
+    "@react-spring/three": "^9.2.3",
     "@react-three/drei": "^6.2.0",
     "@react-three/fiber": "^7.0.1",
     "@react-three/xr": "^3.1.2",

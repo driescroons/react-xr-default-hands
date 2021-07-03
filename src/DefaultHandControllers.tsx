@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useXR, useXREvent, XREvent } from '@react-three/xr'
 import React, { useEffect, useRef, useState } from 'react'
-import { XRHandedness } from 'three'
+import { BoxBufferGeometry, Color, Intersection, Mesh, MeshBasicMaterial, XRHandedness } from 'three'
 
 import { Axes } from './Axes'
 import { HandModel } from './HandModel'
@@ -13,7 +13,7 @@ enum HandAction {
 }
 
 export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in XRHandedness]?: string } }) {
-  const { controllers, isHandTracking, isPresenting } = useXR()
+  const { controllers, isHandTracking, isPresenting, hoverState } = useXR()
 
   const models = useStore((store) => store.hands.models)
   const set = useStore((store) => store.set)
@@ -21,6 +21,7 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
   const handActions = useRef<{ [key in XRHandedness]?: { date: number; distance: number; action: HandAction }[] }>({ left: [], right: [] })
 
   const [pinched, setPinched] = useState<{ [key in XRHandedness]?: boolean }>({ left: false, right: false })
+  const [rays] = React.useState(new Map<number, Mesh>())
 
   const modelsRef = useRef<{ [key in XRHandedness]?: HandModel }>({
     left: undefined,
@@ -40,12 +41,21 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
   }, [])
 
   useEffect(() => {
+    // handle cleanups
     if (models?.current) {
-      controllers.map((c) => {
+      controllers.forEach((c) => {
         let model = models?.current[c.inputSource.handedness]
         if (!model) {
           const model = new HandModel(c.controller, c.inputSource, modelPaths)
           models!.current[c.inputSource.handedness] = model
+
+          const ray = new Mesh()
+          ray.rotation.set(Math.PI / 2, 0, 0)
+          ray.material = new MeshBasicMaterial({ color: new Color(0xffffff), opacity: 0.8, transparent: true })
+          ray.geometry = new BoxBufferGeometry(0.002, 1, 0.002)
+
+          rays.set(c.controller.id, ray)
+          c.controller.add(ray)
         }
       })
     }
@@ -69,8 +79,8 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
   }, [controllers, isHandTracking, models])
 
   useFrame(() => {
-    if (isHandTracking) {
-      controllers.map((c, index) => {
+    controllers.map((c, index) => {
+      if (isHandTracking) {
         const model = models?.current[c.inputSource.handedness]
         if (model && !model?.loading) {
           const distance = model!.getThumbIndexDistance()
@@ -104,8 +114,26 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
             setPinched({ ...pinched, [c.inputSource.handedness]: false })
           }
         }
-      })
-    }
+      }
+
+      const ray = rays.get(c.controller.id)
+      if (!ray) return
+
+      const intersection: Intersection = hoverState[c.inputSource.handedness].values().next().value
+      if (!intersection || c.inputSource.handedness === 'none') {
+        ray.visible = false
+        return
+      }
+
+      const rayLength = intersection?.distance ?? 5
+
+      // Tiny offset to clip ray on AR devices
+      // that don't have handedness set to 'none'
+      const offset = -0.01
+      ray.visible = true
+      ray.scale.y = rayLength + offset
+      ray.position.z = -rayLength / 2 - offset
+    })
   })
 
   useXREvent('selectstart', (e: XREvent) => {
