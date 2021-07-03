@@ -1,25 +1,7 @@
-import { useFrame, useThree } from '@react-three/fiber'
-import { useXR, useXREvent, XRController, XREvent } from '@react-three/xr'
-import React, { useEffect, useRef, useState } from 'react'
-import { useCallback } from 'react'
-import { useMemo } from 'react'
-import {
-  BoxBufferGeometry,
-  BufferGeometry,
-  Euler,
-  Group,
-  Line,
-  LineBasicMaterial,
-  Matrix4,
-  Mesh,
-  MeshBasicMaterial,
-  Object3D,
-  Quaternion,
-  SphereGeometry,
-  Vector3,
-  XRHandedness,
-  XRHandJoint
-} from 'three'
+import { useFrame } from '@react-three/fiber'
+import { XRController } from '@react-three/xr'
+import React, { useRef } from 'react'
+import { BufferGeometry, LineBasicMaterial, Mesh, MeshBasicMaterial, Object3D, SphereGeometry, Vector3 } from 'three'
 
 import { HandModel } from './HandModel'
 

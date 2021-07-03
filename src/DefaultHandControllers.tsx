@@ -1,9 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { useXR, useXREvent, XREvent } from '@react-three/xr'
 import React, { useEffect, useRef, useState } from 'react'
-import { useCallback } from 'react'
-import { MutableRefObject } from 'react'
-import { useMemo } from 'react'
 import { XRHandedness } from 'three'
 
 import { Axes } from './Axes'
@@ -61,13 +58,9 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
         let model = models!.current[c.inputSource.handedness]
         if (model) {
           if (isHandTracking) {
-            if (!(model.inputSource.handedness === c.inputSource.handedness && model.loaded)) {
-              model.load(c.hand, c.inputSource, true)
-            }
+            model.load(c.hand, c.inputSource, true)
           } else {
-            if (!(model.inputSource.handedness === c.inputSource.handedness && model.loaded)) {
-              model.load(c.controller, c.inputSource, false)
-            }
+            model.load(c.controller, c.inputSource, false)
           }
           models!.current[c.inputSource.handedness] = model
         }

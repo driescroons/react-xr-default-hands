@@ -1,9 +1,8 @@
 import { useFrame } from '@react-three/fiber'
-import { Interactive, useXR, useXREvent, XRController, XREvent } from '@react-three/xr'
+import { useXR, useXREvent, XRController, XREvent } from '@react-three/xr'
+import React, { forwardRef, ReactNode, useRef } from 'react'
 import mergeRefs from 'react-merge-refs'
-import React, { forwardRef, ReactNode, useCallback, useRef } from 'react'
-import { MutableRefObject } from 'react'
-import { Box3, Group, Matrix3, Matrix4, Mesh, Object3D, Quaternion, Vector3, XRHandedness } from 'three'
+import { Box3, Matrix3, Matrix4, Mesh, Object3D, Quaternion, Vector3 } from 'three'
 import { OBB } from 'three/examples/jsm/math/OBB'
 
 import { HandModel } from './HandModel'
@@ -15,11 +14,14 @@ export const Grab = forwardRef(
       children,
       disabled = false,
       onChange,
+      // instead of checking for a generic way here, do the calculation in the Interactable itself.
+      callback,
       ...props
     }: {
       children: ReactNode
       disabled?: boolean
       onChange: ({ isGrabbed, controller }: { isGrabbed: boolean; controller: XRController }) => void
+      callback: ({ controller, model }: { controller: XRController; model: HandModel }) => boolean
     },
     passedRef
   ) => {
@@ -59,46 +61,52 @@ export const Grab = forwardRef(
         return
       }
 
-      let mesh: Mesh | undefined = undefined
-      ref.current!.traverse((object) => {
-        if (!mesh && object instanceof Mesh && object.geometry) {
-          mesh = object
-        }
-      })
-      if (!mesh) {
-        return
-      }
-
-      const obb = new OBB(
-        new Vector3().setFromMatrixPosition(ref.current!.matrixWorld),
-        ((mesh as Mesh).geometry!.boundingBox as Box3).getSize(new Vector3()).multiply(ref.current!.scale).divideScalar(2),
-        new Matrix3().setFromMatrix4(ref.current!.matrixWorld.clone().makeScale(1, 1, 1))
-      )
-
       const model = models?.current[e.controller.inputSource.handedness]
 
       if (!model) {
         return
       }
 
-      const position = model!.getHandPosition()
-      const matrix = model!.getHandRotationMatrix()
+      let colliding = false
 
-      const indexTip = model!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
-      const thumbTip = model!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
+      if (!callback) {
+        // NOT USED FOR NOW HERE, WE USE THE CALLBACK FOR TESTING
+        let mesh: Mesh | undefined = undefined
+        ref.current!.traverse((object) => {
+          if (!mesh && object instanceof Mesh && object.geometry) {
+            mesh = object
+          }
+        })
+        if (!mesh) {
+          return
+        }
 
-      const thumbOBB = new OBB(
-        indexTip.getWorldPosition(new Vector3()),
-        new Vector3(0.05, 0.05, 0.05).divideScalar(2),
-        new Matrix3().setFromMatrix4(matrix)
-      )
-      const indexOBB = new OBB(
-        thumbTip.getWorldPosition(new Vector3()),
-        new Vector3(0.05, 0.05, 0.05).divideScalar(2),
-        new Matrix3().setFromMatrix4(matrix)
-      )
+        const obb = new OBB(
+          new Vector3().setFromMatrixPosition(ref.current!.matrixWorld),
+          ((mesh as Mesh).geometry!.boundingBox as Box3).getSize(new Vector3()).multiply(ref.current!.scale).divideScalar(2),
+          new Matrix3().setFromMatrix4(ref.current!.matrixWorld.clone().makeScale(1, 1, 1))
+        )
 
-      const colliding = obb.intersectsOBB(thumbOBB, Number.EPSILON) && obb.intersectsOBB(indexOBB, Number.EPSILON)
+        const matrix = model!.getHandRotationMatrix()
+
+        const indexTip = model!.bones.find((bone) => (bone as any).jointName === 'index-finger-tip')! as Object3D
+        const thumbTip = model!.bones.find((bone) => (bone as any).jointName === 'thumb-tip')! as Object3D
+
+        const thumbOBB = new OBB(
+          indexTip.getWorldPosition(new Vector3()),
+          new Vector3(0.05, 0.05, 0.05).divideScalar(2),
+          new Matrix3().setFromMatrix4(matrix)
+        )
+        const indexOBB = new OBB(
+          thumbTip.getWorldPosition(new Vector3()),
+          new Vector3(0.05, 0.05, 0.05).divideScalar(2),
+          new Matrix3().setFromMatrix4(matrix)
+        )
+
+        colliding = obb.intersectsOBB(thumbOBB, Number.EPSILON) && obb.intersectsOBB(indexOBB, Number.EPSILON)
+      } else {
+        colliding = callback({ controller: e.controller, model: model })
+      }
 
       if (colliding) {
         grabbingController.current = e.controller

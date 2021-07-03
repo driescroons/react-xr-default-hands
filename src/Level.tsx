@@ -5,7 +5,7 @@ interface Props {}
 
 export default function Level({}: Props): ReactElement {
   const blocks = useMemo(() => {
-    return [...Array(5)].map((_) => {
+    return [...Array(10)].map((_) => {
       const angle = Math.random() * Math.PI * 2
       return (
         <Suspense fallback={null}>

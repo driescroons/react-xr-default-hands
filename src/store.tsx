@@ -1,7 +1,6 @@
 import produce, { setAutoFreeze } from 'immer'
-import { MutableRefObject, RefObject, useRef } from 'react'
-import { Box3, BufferGeometry, Camera, Color, Euler, Group, Mesh, Object3D, Vector3, XRHandedness } from 'three'
-import { OBB } from 'three/examples/jsm/math/OBB'
+import { MutableRefObject } from 'react'
+import { Object3D, XRHandedness } from 'three'
 import createStore, { State as ZustandState, StateCreator } from 'zustand'
 
 import { HandModel } from './HandModel'
