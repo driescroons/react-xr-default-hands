@@ -63,7 +63,8 @@ export function DefaultHandControllers({ modelPaths }: { modelPaths?: { [key in 
 
   useEffect(() => {
     // fix this firing twice when going in vr mode
-    if (isPresenting && Object.values(models!.current).filter((model) => !!model).length === controllers.length) {
+    // this doesn't do anything && Object.values(models!.current).filter((model) => !!model).length === controllers.length
+    if (isPresenting) {
       controllers.forEach((c, index) => {
         let model = models!.current[c.inputSource.handedness]
         if (model) {
